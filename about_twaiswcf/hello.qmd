@@ -1,0 +1,12 @@
+---
+title: "Machine learning with julia"
+format: 
+    html:
+        code-fold: true
+---
+
+# Hello world
+
+```{julia}
+1+1
+```
