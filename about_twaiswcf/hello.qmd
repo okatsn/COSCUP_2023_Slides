@@ -3,10 +3,17 @@ title: "Machine learning with julia"
 format: 
     html:
         code-fold: true
+jupyter: julia-1.9
 ---
 
 # Hello world
 
+
+1+1 = 2
+
+
+
 ```{julia}
-1+1
+using Pkg
+Pkg.status()
 ```
