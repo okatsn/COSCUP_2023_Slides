@@ -1,0 +1,4 @@
+name = "COSCUP_2023"
+uuid = "b8c3cb25-747c-4261-9999-7730fd389ff0"
+authors = ["okatsn <okatsn@gmail.com>"]
+version = "0.1.0"
