@@ -2,3 +2,10 @@ name = "COSCUP_2023"
 uuid = "b8c3cb25-747c-4261-9999-7730fd389ff0"
 authors = ["okatsn <okatsn@gmail.com>"]
 version = "0.1.0"
+
+[deps]
+IJulia = "7073ff75-c697-5162-941a-fcdaad2a7d2a"
+LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
+Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
+SWCForecastBase = "f25bfc00-93e4-48b9-89c1-3948a036d4be"
+TWAISWCF = "d9c8f7ca-66b2-433f-ab74-835b361b75b3"

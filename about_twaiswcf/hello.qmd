@@ -1,13 +1,15 @@
 ---
 title: "Machine learning with julia"
-format: 
-    html:
-        code-fold: true
 jupyter: julia-1.9
+format: revealjs
 ---
 
 # Hello world
 
+[Quarto Tutorial](https://quarto.org/docs/get-started/hello/vscode.html)
+[A year of using Quarto with Julia](https://www.paltmeyer.com/blog/posts/tips-and-tricks-for-using-quarto-with-julia/)
+[Quarto presentation](https://quarto.org/docs/presentations/)
+[Quarto using Julia](https://quarto.org/docs/computations/julia.html)
 
 1+1 = 2
 
