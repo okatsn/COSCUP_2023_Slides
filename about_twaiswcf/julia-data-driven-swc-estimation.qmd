@@ -551,5 +551,5 @@ After runtests.jl is set up, run all tests in just one click in pkg-REPL. For mo
 - Joint-station SWC estimation
 
 ## Reference
-TODO: add link to this slide 
+This slide is available at https://github.com/okatsn/COSCUP_2023_Slides
 
