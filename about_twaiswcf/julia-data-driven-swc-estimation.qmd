@@ -1,0 +1,555 @@
+---
+title: "Julia for Data-Driven Soil Water Content Estimation in Agriculture"
+execute: 
+    eval: false # by default don't evaluate cell
+    echo: true # echo source code to doc
+date: 2023-07-30
+# title-slide-attributes: 
+    # data-background-image: logo_slide_backgroud.png
+    # data-background-size: contain
+authour: "Tsung-Hsi, Wu"
+jupyter: julia-1.9
+bibliography: main.bib
+format: 
+    revealjs:
+        width: 1600
+        height: 900
+        theme: serif # https://quarto.org/docs/presentations/revealjs/#themes
+        logo: Fig_logo_bar_ncu.png
+        preview-links: auto
+        slide-number: true
+        toc: true
+        toc-title: Outline
+        toc-depth: 2
+---
+
+# Introduction
+
+## About me
+
+I'm Tsung-Hsi, Wu (吳宗羲)
+
+- **Affiliation**: National Central University, a PhD. student.
+- **Expertise**: geophysics; earthquake dynamics; stochastic process
+- **Hobby**: programming with julia
+- **Contact me**: https://github.com/okatsn
+
+![](AboutMe_causual.jpg){.absolute bottom=50 right=0 width=400}
+
+
+## Overview of the study on soil water content (SWC) estimation {.scrollable}
+
+### Importance of Understanding Hydrological Dynamics
+
+- Enhance agricultural practices
+- Water resource optimization
+- Efficient urban green space management
+- Flood risk assessment
+
+### Using ML methods
+
+- Fast
+- Better performance
+
+### In this study
+
+- Feasibility investigation of using the Classification and Regression Tree (CART) algorithm in SWC estimation
+- Training and validation of CART models using meteorological data from a grassland terrain in northern Taiwan
+
+
+### The study area and dataset
+
+:::: {.columns}
+
+::: {.column width="60%"}
+#### Input features
+
+- precipitation
+- air-temperature
+- solar radiation
+- pressure
+- windspeed
+- humidity
+
+#### Time shifts
+
+- up to 192 hours
+
+#### Target features
+
+- SWC of depths from 10 to 100 cm of the future 10 minutes to 1 hour
+
+:::
+
+::: {.column width="40%"}
+
+#### Site
+
+![@ncusurfacehydrologylabAerialView](Fig_site_ncutower.png)
+
+![@ichiehEffectsEvapotranspirationInfiltration2019](Fig_rock_sample.png)
+
+:::
+::::
+
+### Research Methodology
+
+Classification And Regression Tree, CART, provided by [JuliaAI/DecisionTree.jl](https://github.com/JuliaAI/DecisionTree.jl).
+
+Regression tree:
+
+- is a supervised ML method capable for time-series forecasting; 
+- is constructed by minimizing MSE^[mean squared error] by recursively creating binary branches; 
+
+$$
+    \min_{j, s}[\min_{c_L} \displaystyle\sum_{x_i \in R_L(j,s)}(y_i-c_L)^2 +
+        \min_{c_R} \displaystyle\sum_{x_i \in R_R(j,s)}(y_i-c_R)^2 ]
+$$
+
+![](Fig_tree_visual_example.png)
+
+
+- is also a widely applied feature analysis/selection tool.
+
+
+### Effectiveness of CART in SWC Estimation
+
+::::{.columns}::::
+:::{.column width='65%'}
+![](Fig_Timeseries_every_depth_TimeSeriesCV_with_P.png)
+
+:::
+:::{.column width='35%'}
+![](Fig_lossMAE_every_depthxfold_TimeSeriesCV.png)
+
+![](Fig_Loss_MAE_fsets_basic.png)
+
+![](Fig_MAE_Trial003.png)
+
+:::
+::::
+
+
+|                         | This study (Trial003)                                                                                                   | Pekel (2020)                                                             | Carranza et al. (2021)                                                 |
+| :---------------------- | :---------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------- | :--------------------------------------------------------------------- |
+| Algorithm               | •Decision tree                                                                                                          | •Decision tree                                                           | •Random forest                                                         |
+| Loss in testing dataset | •Averaged MAE = 0.018 (1.8 %) over 12 subsets •Median MAE = 0.0117 (1.17%) over all data points across total 12 subsets | •Median MAE = 0.006-0.012 for the same dataset but different tree models | •MAE = 0.01-0.0173 across fields of different types of crop            |
+| Time shift              | •10-minutes forecast                                                                                                    | •Nowcast                                                                 | •Nowcast                                                               |
+| Target feature          | •SWC of 10 - 100 cm depth                                                                                                     | •SWC of 30 cm depth                                                      | •SWC of ~18 cm depth (estimated by GPR*)                               |
+| Input features          | •Basic atmospheric measurements                                                                                         | •Basic atmospheric measurements AND soil temperature                     | •Vegetation Indices derived from multi-spectral images obtained by UAV |
+
+: {.striped .hover}
+
+
+# Application of Julia in the Study
+
+## Why Julia?
+
+
+### A balance between dynamic and static typing {.scrollable}
+
+- Consistent syntax, flexible and easy to extend
+- Rapid prototyping; running fast
+- Coding with Julia is a pleasure
+- Julia's type system is reasonable for scientists
+
+### Prepare the data in a breeze
+
+- DataFrames.jl is awesome
+
+### Great Package managing system
+
+- Simple and consistent
+- Maximize the reuse of code
+- Easy to test and maintain
+
+
+
+## Data preparation with julia
+
+```{julia}
+#| code-line-numbers: "|5|7|9-10|12-13|15-16|18-20|22-23|25"
+#| eval: false
+using SWCForecastBase
+using DataFrames, Impute
+using SWCExampleDatasets
+
+df = SWCExampleDatasets.dataset("NCUWiseLab", "ARI_G2F820_example") # load a dataset (made by SmallDatasetMaker)
+
+dfg = groupby(df, :hour) # group dataframe by column "hour"
+
+df1 = combine(dfg, All() .=> last; renamecols=false)
+# combine groups by taking the last row of `All` columns. "." is the broadcasting operator.
+
+select!(df1, AsTable(:) => ByRow(nt -> map(x -> (islnan(x) ? missing : x), nt)) => AsTable)
+# replace all literal Not a Number as `missing`
+
+select!(df1, All() .=> (x -> all(ismissing.(x)) ? 999 : x); renamecols=false)
+# if all missing then 999 (e.g., to_substitute = 999)
+
+Impute.interp!(df1) # linear interpolation
+Impute.locf!(df1) # LOCF: Last Observation Carried Forward
+Impute.nocb!(df1) # NOCB: Next Observation Carried Backward
+
+transform!(df, AsTable(Cols(r"\Aprecipitation")) => ByRow(maximum) => :precipitation_max)
+# Take the largest observation of precipitation in the site as a new variable (column)
+
+disallowmissing!(df1);
+```
+
+::: {.callout-tip}
+### Key points
+
+- `select`, `transform` and `combine` shares the same syntax.
+- Broadcasting makes multi-column transformations easy.
+- Multiple dispatch makes function employment simply, clear, and flexible (e.g., [`islnan`](https://okatsn.github.io/SWCForecastBase.jl/dev/#SWCForecastBase.islnan-Tuple{AbstractString})).
+
+:::
+
+
+## An example of how multiple dispatch works
+
+
+::: {.callout-note}
+### Hint
+
+Julia dispatches method of the same name according to the type of the input argument(s).
+:::
+
+To distinguish whether a value of any type is "literally" Not-a-Number:
+
+```{julia}
+#| code-line-numbers: "|5-11|20-22|31-35"
+"""
+Return true if it is literally not a number.
+For example, `all(islnan.(["#VALUE!", "nan", "NaN", "Nan", nothing]))` is `true`.
+"""
+function islnan(x::AbstractString)
+    if in(x, ["#VALUE!", "nan", "NaN", "Nan"])
+        return true
+    else
+        return false
+    end
+end
+
+listfalse = "`Nothing`, `Missing`, `DateTime`, and `AbstractString`"
+
+"""
+For `x` being the type other than the types listed above, `islnan(x)` falls back to `isnnm(x)`.
+
+See `isnnm`.
+"""
+function islnan(x::Any)
+    return isnnm(x)
+end
+
+"""
+Check if `x` is `missing`, `nothing` or `NaN`.
+Different from `isnan`, for `x` being either of $listfalse, `islnan(x)` returns `true` for `Nothing` and `Missing`, and returns `false` for the rest.
+
+
+The difference between `islnan` and `isnnm` is that, `isnnm` check only `NaN` for Not-a-Number. If you input something like `"#VALUE!", "NaN"`, it returns `false` (NOT `missing`, `nothing` or `NaN`).
+"""
+isnnm(x::Missing) = true # `isnan(missing)` returns missing
+isnnm(x::Nothing) = true # `isnan(nothing)` raises MethodError
+isnnm(x::DateTime) = false # `isnan(DateTime)` raises MethodError
+isnnm(x::AbstractString) = false # `isnan(AbstractString)` raises MethodError
+isnnm(x) = isnan(x)
+```
+
+## Manage codes in a package {.scrollable}
+
+### An example, [okatsn/SWCForecastBase.jl](https://okatsn.github.io/SWCForecastBase.jl/)
+
+
+::::{.columns}::::
+:::{.column width='20%'}
+
+```
+SWCForecastBase/
+├── src
+│   └── SWCForecastBase.jl
+│   ├── myimputation
+│   │   ├── checkmissnan.jl
+│   │   └── myimpute.jl
+│   ├── pipeline.jl
+│   ⋮
+|
+├── Project.toml
+└── test
+    ⋮
+```
+:::
+:::{.column width='40%'}
+
+In SWCForecastBase.jl
+
+
+```{julia}
+module SWCForecastBase
+
+# # Imputation
+using Impute, Dates, Statistics, DataFrames
+include("myimputation/myimpute.jl")
+export imputemean!, imputeinterp!, removeunreasonables!
+
+# # Fundamental utilities
+
+include("myimputation/checkmissnan.jl")
+export chknnm, isnnm, islnan
+
+include("pipeline.jl")
+export simplepipeline
+
+using Chain
+include("combinegroup.jl")
+export combinegroup_allcols
+
+using NaNMath
+include("precipitation.jl")
+export movingaverage
+
+# # Series to supervised
+
+using ShiftedArrays
+include("series2supervised.jl")
+export series2supervised
+
+# # MLJ Model wrappers
+
+using MLJ
+include("mljmodels/treemodels.jl")
+export fstree, twofstree, manytrees
+
+# # Prepare the table
+
+using DataFrames
+include("preparetable/briefinfo.jl")
+include("preparetable/preparetable0.jl")
+include("preparetable/requirement.jl")
+include("preparetable/preparetable.jl")
+
+export PrepareTable, PrepareTableDefault, preparetable!, ConfigAccumulate, ConfigPreprocess, ConfigSeriesToSupervised
+
+# # Train and test
+
+using OkTableTools
+include("preparetable/traintest.jl")
+export traintest!, train!, test!
+
+using CSV, Random, FileTrees
+include("preparetable/save.jl")
+export save
+
+# # Plotting
+
+include("forplot/dataoverview.jl") # only for test
+
+using Dates, Statistics, DataFrames, ShiftedArrays, StructArrays
+using CairoMakie
+include("forplot/dataratio.jl")
+export dataratio, DataRatio, transform_datetime!
+end
+
+```
+
+:::
+
+:::{.column width='40%'}
+
+In myimputation/checkmissnan.jl
+```{julia}
+"""
+Return true if it is literally not a number.
+For example, `all(islnan.(["#VALUE!", "nan", "NaN", "Nan", nothing]))` is `true`.
+"""
+function islnan(x::AbstractString)
+    if in(x, ["#VALUE!", "nan", "NaN", "Nan"])
+        return true
+    else
+        return false
+    end
+end
+
+listfalse = "`Nothing`, `Missing`, `DateTime`, and `AbstractString`"
+
+"""
+For `x` being the type other than the types listed above, `islnan(x)` falls back to `isnnm(x)`.
+
+See `isnnm`.
+"""
+function islnan(x::Any)
+    return isnnm(x)
+end
+
+"""
+Check if `x` is `missing`, `nothing` or `NaN`.
+Different from `isnan`, for `x` being either of $listfalse, `islnan(x)` returns `true` for `Nothing` and `Missing`, and returns `false` for the rest.
+
+
+The difference between `islnan` and `isnnm` is that, `isnnm` check only `NaN` for Not-a-Number. If you input something like `"#VALUE!", "NaN"`, it returns `false` (NOT `missing`, `nothing` or `NaN`).
+"""
+isnnm(x::Missing) = true
+isnnm(x::Nothing) = true
+isnnm(x::DateTime) = false
+isnnm(x::AbstractString) = false
+isnnm(x) = isnan(x)
+
+"""
+`chknnm(df)` check if DataFrame `df` contains missing values or NaN.
+    Use this before input `df` into machine.
+"""
+function chknnm(df)
+    ddf = describe(df)
+    if sum(ddf.nmissing) > 0
+        error("There are still missing value(s) in the DataFrame.")
+    end
+
+    if any(islnan.(ddf.mean))
+        error("Data contains NaN; which might cause crash in model training.")
+    end
+end
+```
+:::
+::::
+
+### that resides in another package...
+
+::::{.columns}::::
+:::{.column width='20%'}
+
+```
+TWAISWCF/
+├── Project.toml
+├── src
+│   └── TWAISWCF.jl
+⋮
+└── test
+    └── runtests.jl
+
+```
+
+:::
+:::{.column width='80%'}
+
+In TWAISWCF.jl
+
+```{julia}
+module TWAISWCF
+  using Dates
+  export DateTime
+
+  using SWCForecastBase
+  export PrepareTable, PrepareTableDefault, preparetable!, ConfigAccumulate, ConfigPreprocess, ConfigSeriesToSupervised
+  export traintest!, train!, test!, save
+end
+
+```
+
+
+
+
+:::
+::::
+
+### benefits from automatic unit tests
+
+
+::::{.columns}::::
+:::{.column width='20%'}
+
+```
+SWCForecastBase/test/
+├── manipulatearray.jl
+├── myimputation.jl
+⋮
+└── runtests.jl
+```
+
+:::
+
+:::{.column width='30%'}
+In test/runtests.jl
+
+```{julia}
+using Test
+using SWCForecastBase
+include("manipulatearray.jl")
+```
+
+:::
+
+:::{.column width='50%'}
+
+In test/manipulatearray.jl, for example
+```{julia}
+using Dates
+@testset "test/manipulatearray.jl" begin
+    stringnans = [
+        "NaN",
+        "nan",
+        "Nan",
+        "#VALUE!",
+    ]
+    for literalnan in stringnans
+        @test islnan(literalnan)
+        @test !isnnm(literalnan)
+    end
+
+    nnms = [
+            NaN,
+        missing,
+        nothing
+    ]
+
+    for nnm in nnms
+        @test islnan(nnm)
+        @test isnnm(nnm)
+    end
+
+    for isn in (islnan, isnnm)
+        @test !isn(DateTime(2022,1,1))
+        @test !isn("A string.")
+    end
+
+end
+```
+:::
+::::
+
+::: {.callout-tip}
+After runtests.jl is set up, run all tests in just one click in pkg-REPL. For more information , see [Testing Base Julia](https://docs.julialang.org/en/v1/stdlib/Test/#Testing-Base-Julia).
+:::
+
+# Introducing TWAISWCF.jl
+
+## [TWAISWCF.jl -- Brief Intro.](https://okatsn.github.io/TWAISWCF/dev/)
+
+- A Framework for soil-water content estimation & forecasting, in compatible with [MLJ](https://alan-turing-institute.github.io/MLJ.jl/) and [DataFrames.jl](https://dataframes.juliadata.org/stable/).
+- A TWAI^[TaiWan AI-based Management Strategy, for Earth and Environmental Disasters] subproject funded by NSTC^[National Science and Technology Council]
+- This is still under development, registered in [okatsn/OkRegistry](https://github.com/okatsn/OkRegistry)^[https://github.com/okatsn/OkRegistry.git]
+
+
+## [TWAISWCF.jl](https://okatsn.github.io/TWAISWCF/dev/){preview-link="true"} {.scrollable}
+
+
+- ![](Fig_TWAISWCF_overview.png)
+
+
+### Aims
+
+- Soil-water content (SWC) estimation for agricultural purposes
+
+### Current status
+
+- Nowcasts of SWC with acceptable error levels using readily available atmospheric parameters
+- Only single site
+
+### Future work
+
+- Using three-day rainfall forecast
+- Joint-station SWC estimation
+
+## Reference
+TODO: add link to this slide 
+
