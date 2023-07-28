@@ -1,0 +1,371 @@
+---
+title: "SmallDatasetMaker.jl"
+subtitle: "A little helper for making and maintaining small datasets as julia packages"
+# title-slide-attributes: 
+    # data-background-image: logo_slide_backgroud.png
+    # data-background-size: contain
+execute: 
+    eval: false # by default don't evaluate cell
+    echo: true # echo source code to doc
+authour: "Tsung-Hsi, Wu"
+jupyter: julia-1.9
+format: 
+    revealjs:
+        height: 810
+        width: 1440
+        theme: [serif, custom.scss] # https://quarto.org/docs/presentations/revealjs/#themes
+        preview-links: auto
+        slide-number: true
+        toc: true
+        toc-title: Outline
+        toc-depth: 2
+        footer: <https://github.com/okatsn/SmallDatasetMaker.jl>
+        footnotes-hover: true
+        reference-location: document
+---
+
+## Introduction and Motivation
+
+Inspired by [RDatasets.jl](https://github.com/JuliaStats/RDatasets.jl), [SmallDatasetMaker](https://github.com/okatsn/SmallDatasetMaker.jl) provides tools to create/add/update a julia package of datasets in only a few steps.
+
+
+### Manage and use datasets like julia packages
+
+- Easy to handle compatibility and data version control in your projects
+- Use default CI to automate your work ^[E.g., CI provided by [PkgTemplates.jl](https://github.com/JuliaCI/PkgTemplates.jl).]
+- Super easy to use in any julia projects
+
+
+### Limitation
+
+- Works fine only for datasets not so big.
+
+# A quick example
+
+## Create dataset using [SmallDatasetMaker](https://github.com/okatsn/SmallDatasetMaker.jl) {.scrollable}
+
+::: {.callout-tip title="Clarification"}
+`YourDatasets` or `YourDatasets.jl` refers an arbitrary julia package of datasets that uses `SmallDatasetMaker.jl`.
+:::
+
+
+### 1. Create a package `YourDatasets.jl` ^[Create a julia package, for example, `YourDatasets.jl`. For convenience, `YourDatasets` in this documentation refers an arbitrary package of datasets working with `SmallDatasetMaker` herein after. See [PkgTemplates](https://github.com/JuliaCI/PkgTemplates.jl) and [Pkg.jl/Creating Packages](https://pkgdocs.julialang.org/v1/creating-packages/) about how to create a julia package.]
+
+### 2. [Convert the raw data to a dataset](https://okatsn.github.io/SmallDatasetMaker.jl/dev/README/#.-Convert-the-raw-data-to-a-dataset) ^[Activate the environment `YourDatasets` and `using SmallDatasetMaker`.]
+
+
+
+1. Prepare your data as a csv file.
+2. Define the `SourceData` object with the `srcpath` referring the csv file.
+3. Call `compress_save!` or `compress_save`.
+
+
+### 3. Add methods `dataset` and `datasets` ^[Noted that you should have `(YourDatasets) pkg> add SmallDatasetMaker` done.]
+- `using SmallDatasetMaker` in the module scope of `YourDatasets`
+- (Optional) New methods for `dataset` and `datasets`.
+
+#### Example
+
+In `src/YourDatasets.jl`:
+
+```{julia}
+#| code-line-numbers: "1,11|2-3|5-10"
+module YourDatasets
+#### (required) ####
+using SmallDatasetMaker
+
+#### (optional but recommended)  ####
+function YourDatasets.dataset(package_name, dataset_name)
+    SmallDatasetMaker.dataset(YourDatasets, package_name, dataset_name)
+end
+
+YourDatasets.datasets() = SmallDatasetMaker.datasets(YourDatasets)
+end
+
+```
+
+
+
+## Use created dataset {.scrollable}
+
+### List available datasets
+
+```{julia}
+#| eval: true
+using SWCExampleDatasets
+SWCExampleDatasets.datasets()
+```
+
+
+
+
+### Load a dataset as `DataFrame`
+
+just like the use of [RDatasets.jl](https://github.com/JuliaStats/RDatasets.jl)
+
+```{julia}
+#| eval: true
+#| output-location: fragment
+df = SWCExampleDatasets.dataset("NCUWiseLab", "ARI_G2F820_example")
+df[1:5, :]
+```
+
+
+# The development of [SmallDatasetMaker](https://github.com/okatsn/SmallDatasetMaker.jl)
+
+## Goals
+
+::: {layout-ncol="2"}
+
+### For dataset maker (who makes and maintains `YourDatasets.jl`):
+
+- Provide convenient tools for data compression and decompression
+- Only minimal effort is required other than creating the package `YourDatasets.jl`
+  - Maker doesn't need to define function for user to load the data.
+- Add/Update/Maintain the datasets easily
+
+### For dataset user (who `using YourDatasets`):
+
+- Use datasets as easy as using a julia package like `RDatasets.jl`
+:::
+
+
+## Knowing where I'm
+
+::::{.columns}::::
+:::{.column width='30%'}
+- Directories are referenced to the module (i.e., `mod = YourDatasets`), using `pathof`.
+- Use **multiple dispatch** to locate relative or absolute directory with the same function `dir_data`.
+
+:::
+:::{.column width='70%'}
+```{julia}
+#| code-line-numbers: "|5-6|11-12,18|23-24"
+"""
+`DATASET_ABS_DIR(mod::Module)` returns 
+the absolute directory for package `mod`.
+"""
+DATASET_ABS_DIR(mod::Module) =
+    Ref{String}(dirname(dirname(pathof(mod))))
+
+"""
+Absolute path to the directory of data.
+"""
+dir_data(mod::Module, args...) =
+    joinpath(DATASET_ABS_DIR(mod)[], "data", args...)
+
+"""
+Relative path to the directory of data; 
+this is called by `SourceData`.
+"""
+dir_data(args...) = joinpath("data", args...)
+
+"""
+`abspath(mod::Module, args...) = joinpath(DATASET_ABS_DIR(mod)[], args...)` return absolute path of the module `mod`.
+"""
+abspath(mod::Module, args...) =
+    joinpath(DATASET_ABS_DIR(mod)[], args...)
+
+```
+
+:::
+::::
+
+## Identify the source data, compress and save {.scrollable}
+
+### Identify the source data 
+
+::::{.columns}::::
+:::{.column width='33%'}
+
+- `SourceData` stores the information from name to the path to raw/compressed data.
+- Quick constructions like `SourceData(srcfile)` is based on the most verbose construction.
+- `SourceData` is mutated by `relpath!` (makes paths relative) and `abspath!` (makes paths absolute).
+
+:::
+:::{.column width='66%'}
+![](sourcedata_screenshot.png)
+
+:::
+::::
+
+
+### Compress and save
+
+```{julia}
+#| code-line-numbers: "|1,4-5,7,10|2,11|36-37|44-45"
+function compress_save!(mod::Module, SD::SourceData;
+    move_source=true)
+
+    compressed = return_compressed(SD.srcfile)
+    target_path = SD.zipfile
+    mkpath(dirname(target_path))
+    open(target_path, "w") do io
+        write(io, compressed)
+        @info "Zipped file saved at $target_path"
+    end # save compressed data in the absolute path of your in-dev package 
+    if move_source # srcfile (raw data) is preserved in folder to be .gitignored
+        (pkgname, _) = get_package_dataset_name(SD.srcfile)
+        target_raw = dir_raw(mod, pkgname, basename(SD.srcfile))
+        if isfile(target_raw)
+            ex = open(target_raw, "r") do io
+                read(io)
+            end
+
+            current = open(SD.srcfile, "r") do io
+                read(io)
+            end
+            @assert isequal(ex, current) "[move_source=$(move_source)] $(target_raw) already exists but it is different from $(SD.srcfile)."
+
+
+            @info "$(target_raw) already exists and it is exactly the same as $(SD.srcfile). Remove the later."
+            rm(SD.srcfile)
+
+        else
+            OkFiles.mkdirway(target_raw) # mkpath of dir_raw() in case it doesn't exists
+            mv(SD.srcfile, target_raw)
+            @info "Raw data moved to $(target_raw)."
+        end
+        SD.srcfile = target_raw
+    end
+
+    relpath!(SD, mod) # makes paths in `SourceData` relative 
+    #                 # (thus can be abspath! correctly when using `dataset`)
+    reftablepath = dataset_table(mod)
+    dirdoc = dirname(reftablepath)
+    if !isdir(dirdoc)
+        mkpath(dirdoc) # if dirdoc does not exist, the following CSV.write will fail
+    end
+
+    # Add this index to the last row of the index table
+    CSV.write(reftablepath, SmallDatasetMaker.DataFrame(SD); append=isfile(reftablepath))
+    @info "$(basename(reftablepath)) updated successfully."
+
+end
+```
+
+
+## Execute codes within the scope of `YourDatasets`
+
+
+::::{.columns}::::
+:::{.column width='30%'}
+
+Load the index table in runtime
+
+- The index table is stored in `data/doc/datasets.csv`.
+- It is loaded in runtime only when you need it, 
+  - by evaluating (`@eval`) the code pieces (`expr`)
+
+:::
+:::{.column width='70%'}
+
+```{julia}
+#| code-line-numbers: "|13-14|17-21|24"
+"""
+`datasets(mod::Module)` 
+reads the table from `dataset_table(mod)`, 
+and set `__datasets::DataFrame` to be the 
+`const` variable in the scope of `mod` 
+(i.e., `mod.__datasets` show the list of packages and datasets).
+
+If there is no `using SmallDatasetMaker` 
+in the `module \$mod ... end`, it will fail 
+since it is executed at the scope of `mod`.
+"""
+function datasets(mod::Module)
+    tablepath = dataset_table(mod)
+    # Return absolute path to data/doc/datasets.csv
+
+    if !isdefined(mod, :__datasets)
+        expr = quote
+            const __datasets =
+                SmallDatasetMaker.readcsvfile($tablepath)
+        end
+        @eval(mod, $expr)
+    end
+
+    return mod.__datasets
+end
+```
+
+:::
+::::
+
+# Concluding remark
+
+## Practical Implementations {.scrollable}
+
+
+::::{.columns}::::
+:::{.column width='35%'}
+
+### [FSDatasets.jl](https://okatsn.github.io/FSDatasets.jl/dev/) 
+-  the julia interface for retrieving the dataset of [Fisher information and Shannon entropy of Rock friction experiment](https://data.mendeley.com/datasets/ybcs4mjp6d/)
+
+:::
+:::{.column width='65%'}
+![](fsdatasets_screenshot.png){fig-align="center"}
+
+
+:::
+::::
+
+
+
+::::{.columns}::::
+:::{.column width='35%'}
+
+### [SWCExampleDatasets.jl](https://github.com/okatsn/SWCExampleDatasets.jl) 
+- An example dataset for the project [TWAISWCF](https://okatsn.github.io/TWAISWCF/dev/), a playground for soil-water content estimation & forecasting.
+
+:::
+:::{.column width='65%'}
+![](twaiswcf_screenshot.png){fig-align="center"}
+
+
+:::
+::::
+
+## Reference
+
+This slide is available at https://github.com/okatsn/COSCUP_2023_Slides
+
+
+
+# Appendix
+
+## Difference between the usage of `YourDatasets` and `RDatasets`
+
+(`YourDatasets` is an arbitrary julia package of datasets using `SmallDatasetMaker.jl`)
+
+::: {layout-ncol="2"}
+
+### For `RDatasets` 
+
+- `RDatasets.__datasets` is a `global` variable
+- `dataset` and `datasets` is exported
+  - example: 
+    ```julia
+    using RDatasets
+    datasets()
+    ```
+
+### For `YourDatasets`
+
+- `YourDatasets.__datasets` is a `const` variable
+- `dataset` and `datasets` is not exported
+  - example
+    ```julia
+    using YourDatasets 
+    YourDatasets.datasets()
+    ```
+
+
+
+:::
+
+
+
+
+

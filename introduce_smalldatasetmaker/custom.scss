@@ -1,0 +1,31 @@
+/*-- scss:defaults --*/
+
+// $body-bg: #d6ffa448;
+// $body-color: #fff;
+$link-color: #186949;
+$code-color: #4758ab; // The same color for theme "serif"
+// $code-bg: #a3a3a3;
+
+
+/*-- scss:rules --*/
+
+code.sourceCode {
+    font-size: larger;
+}
+
+// set sourceCode larger
+
+div.data-frame {
+    font-size: x-large;
+}
+
+// set dataframe output small (x-large is smaller than larger)
+
+
+
+// KEYNOTE:
+// - add `theme: [serif, custom.scss] ` under `format: revealjs:`
+// - How to customize theme: see https://quarto.org/docs/presentations/revealjs/themes.html#customizing-themes
+// - CSS code for the fontsize of code: https://stackoverflow.com/questions/75907436/quarto-revealjs-increase-relative-font-size-of-code-chunks
+// - also see: https://community.rstudio.com/t/changing-text-font-size-in-revealjs/14198
+// - Inspect your slide in browser to identify the target to be set

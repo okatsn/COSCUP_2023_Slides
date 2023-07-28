@@ -413,7 +413,7 @@
 <li><a href="#/goals" id="/toc-goals">Goals</a></li>
 <li><a href="#/knowing-where-im" id="/toc-knowing-where-im">Knowing where I’m</a></li>
 <li><a href="#/identify-the-source-data-compress-and-save" id="/toc-identify-the-source-data-compress-and-save">Identify the source data, compress and save</a></li>
-<li><a href="#/execute-codes-in-user-or-makers-workspace" id="/toc-execute-codes-in-user-or-makers-workspace">Execute codes in user or maker’s workspace?</a></li>
+<li><a href="#/execute-codes-within-the-scope-of-yourdatasets" id="/toc-execute-codes-within-the-scope-of-yourdatasets">Execute codes within the scope of <code>YourDatasets</code></a></li>
 </ul></li>
 <li><a href="#/concluding-remark" id="/toc-concluding-remark">Concluding remark</a>
 <ul>
@@ -495,7 +495,7 @@
 <div class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb2-1"><a href="#cb2-1"></a><span class="im">using</span> <span class="bu">SWCExampleDatasets</span></span>
 <span id="cb2-2"><a href="#cb2-2"></a>SWCExampleDatasets.<span class="fu">datasets</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="40">
+<div class="cell-output cell-output-display" data-execution_count="7">
 <div><div style="float: left;"><span>1×9 DataFrame</span></div><div style="clear: both;"></div></div><div class="data-frame" style="overflow-x: scroll;">
 <table class="data-frame" data-quarto-postprocess="true" style="margin-bottom: 6px;">
 <thead>
@@ -549,7 +549,7 @@
 <span id="cb3-2"><a href="#cb3-2"></a>df[<span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, <span class="op">:</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell fragment" data-execution_count="3">
-<div class="cell-output cell-output-display" data-execution_count="41">
+<div class="cell-output cell-output-display" data-execution_count="8">
 <div><div style="float: left;"><span>5×19 DataFrame</span></div><div style="clear: both;"></div></div><div class="data-frame" style="overflow-x: scroll;">
 <table class="data-frame" data-quarto-postprocess="true" style="margin-bottom: 6px;">
 <thead>
@@ -754,7 +754,7 @@
 </ul>
 </div><div class="column" style="width:70%;">
 <div class="cell" data-execution_count="4">
-<div class="sourceCode cell-code" id="cb4" data-code-line-numbers="|5-6|11-12,18"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb4-1"><a href="#cb4-1"></a><span class="st">"""</span></span>
+<div class="sourceCode cell-code" id="cb4" data-code-line-numbers="|5-6|11-12,18|23-24"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb4-1"><a href="#cb4-1"></a><span class="st">"""</span></span>
 <span id="cb4-2"><a href="#cb4-2"></a><span class="st">`DATASET_ABS_DIR(mod::Module)` returns </span></span>
 <span id="cb4-3"><a href="#cb4-3"></a><span class="st">the absolute directory for package `mod`.</span></span>
 <span id="cb4-4"><a href="#cb4-4"></a><span class="st">"""</span></span>
@@ -771,7 +771,13 @@
 <span id="cb4-15"><a href="#cb4-15"></a><span class="st">Relative path to the directory of data; </span></span>
 <span id="cb4-16"><a href="#cb4-16"></a><span class="st">this is called by `SourceData`.</span></span>
 <span id="cb4-17"><a href="#cb4-17"></a><span class="st">"""</span></span>
-<span id="cb4-18"><a href="#cb4-18"></a><span class="fu">dir_data</span>(args<span class="op">...</span>) <span class="op">=</span> <span class="fu">joinpath</span>(<span class="st">"data"</span>, args<span class="op">...</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-18"><a href="#cb4-18"></a><span class="fu">dir_data</span>(args<span class="op">...</span>) <span class="op">=</span> <span class="fu">joinpath</span>(<span class="st">"data"</span>, args<span class="op">...</span>)</span>
+<span id="cb4-19"><a href="#cb4-19"></a></span>
+<span id="cb4-20"><a href="#cb4-20"></a><span class="st">"""</span></span>
+<span id="cb4-21"><a href="#cb4-21"></a><span class="st">`abspath(mod::Module, args...) = joinpath(DATASET_ABS_DIR(mod)[], args...)` return absolute path of the module `mod`.</span></span>
+<span id="cb4-22"><a href="#cb4-22"></a><span class="st">"""</span></span>
+<span id="cb4-23"><a href="#cb4-23"></a><span class="fu">abspath</span>(mod<span class="op">::</span><span class="dt">Module</span>, args<span class="op">...</span>) <span class="op">=</span></span>
+<span id="cb4-24"><a href="#cb4-24"></a>    <span class="fu">joinpath</span>(<span class="fu">DATASET_ABS_DIR</span>(mod)[], args<span class="op">...</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 </div>
@@ -842,8 +848,8 @@
 <span id="cb5-48"><a href="#cb5-48"></a><span class="kw">end</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="execute-codes-in-user-or-makers-workspace" class="slide level2">
-<h2>Execute codes in user or maker’s workspace?</h2>
+<section id="execute-codes-within-the-scope-of-yourdatasets" class="slide level2">
+<h2>Execute codes within the scope of <code>YourDatasets</code></h2>
 <div class="columns">
 <div class="column" style="width:30%;">
 <p>Load the index table in runtime</p>
@@ -856,7 +862,7 @@
 </ul>
 </div><div class="column" style="width:70%;">
 <div class="cell" data-execution_count="6">
-<div class="sourceCode cell-code" id="cb6" data-code-line-numbers="|13-14|17-21"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb6-1"><a href="#cb6-1"></a><span class="st">"""</span></span>
+<div class="sourceCode cell-code" id="cb6" data-code-line-numbers="|13-14|17-21|24"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb6-1"><a href="#cb6-1"></a><span class="st">"""</span></span>
 <span id="cb6-2"><a href="#cb6-2"></a><span class="st">`datasets(mod::Module)` </span></span>
 <span id="cb6-3"><a href="#cb6-3"></a><span class="st">reads the table from `dataset_table(mod)`, </span></span>
 <span id="cb6-4"><a href="#cb6-4"></a><span class="st">and set `__datasets::DataFrame` to be the </span></span>
@@ -869,7 +875,7 @@
 <span id="cb6-11"><a href="#cb6-11"></a><span class="st">"""</span></span>
 <span id="cb6-12"><a href="#cb6-12"></a><span class="kw">function</span> <span class="fu">datasets</span>(mod<span class="op">::</span><span class="dt">Module</span>)</span>
 <span id="cb6-13"><a href="#cb6-13"></a>    tablepath <span class="op">=</span> <span class="fu">dataset_table</span>(mod)</span>
-<span id="cb6-14"><a href="#cb6-14"></a>    <span class="co"># Absolute path to data/doc/datasets.csv</span></span>
+<span id="cb6-14"><a href="#cb6-14"></a>    <span class="co"># Return absolute path to data/doc/datasets.csv</span></span>
 <span id="cb6-15"><a href="#cb6-15"></a></span>
 <span id="cb6-16"><a href="#cb6-16"></a>    <span class="cf">if</span> !<span class="fu">isdefined</span>(mod, <span class="op">:</span>__datasets)</span>
 <span id="cb6-17"><a href="#cb6-17"></a>        expr <span class="op">=</span> <span class="kw">quote</span></span>
